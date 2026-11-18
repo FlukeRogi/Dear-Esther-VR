@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Dear Esther: Landmark Edition is Unity 5.3.6f1, 32-bit, Mono (.NET 3.5 profile). -->
+  <PropertyGroup>
+    <TargetFramework>net35</TargetFramework>
+    <AssemblyName>DearEstherVR</AssemblyName>
+    <RootNamespace>DearEstherVR</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Dear Esther Landmark Edition</GameDir>
+    <Managed>$(GameDir)\DearEsther_Data\Managed</Managed>
+    <OutputPath>build\</OutputPath>
+    <NoWarn>$(NoWarn);CS0649;CS0169;CS0414;CS0618</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src\**\*.cs" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net35" Version="1.0.3" PrivateAssets="all" />
+    <!-- Unity 5.3 still ships one monolithic UnityEngine.dll. -->
+    <Reference Include="$(Managed)\UnityEngine.dll" Private="false" />
+    <Reference Include="$(Managed)\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(Managed)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="$(Managed)\Assembly-CSharp-firstpass.dll" Private="false" />
+    <Reference Include="$(Managed)\System.Core.dll" Private="false" />
+    <Reference Include="$(Managed)\PlayMaker.dll" Private="false" />
+    <Reference Include="$(Managed)\curve_unity_platform_system.dll" Private="false" />
+  </ItemGroup>
+  <Target Name="Deploy" AfterTargets="Build" Condition="Exists('$(GameDir)\DearEsther.exe')">
+    <MakeDir Directories="$(GameDir)\DearEstherVR" />
+    <Copy SourceFiles="$(OutputPath)DearEstherVR.dll" DestinationFolder="$(GameDir)\DearEstherVR" />
+    <Copy SourceFiles="install\doorstop_config.ini;tools\doorstop\winhttp.dll;tools\doorstop\.doorstop_version" DestinationFolder="$(GameDir)" SkipUnchangedFiles="true" Condition="Exists('tools\doorstop\winhttp.dll')" />
+    <Copy SourceFiles="native\build\Release\DEVRNative.dll;tools\openxr\native\Win32\release\bin\openxr_loader.dll;tools\openvr\win32\openvr_api.dll" DestinationFolder="$(GameDir)\DearEstherVR" Condition="Exists('native\build\Release\DEVRNative.dll')" />
+  </Target>
+</Project>

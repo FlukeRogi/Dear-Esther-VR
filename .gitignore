@@ -1,0 +1,25 @@
+# Everything stays out unless it's listed below. This folder also holds decompiled game code, a save backup,
+# test captures and build output, none of which may reach the repository. PLAN.md is a private working note.
+/*
+
+!/.gitignore
+!/README.md
+!/DEVELOPMENT.md
+!/DearEstherVR.csproj
+
+!/src/
+
+!/native/
+/native/build/
+
+!/install/
+
+!/tests/
+/tests/*.txt
+
+# Only the mod's own tools. Not decomp, ilspy, or the third-party downloads (get_deps.ps1 fetches those).
+!/tools/
+/tools/*
+!/tools/get_deps.ps1
+!/tools/make_package.ps1
+!/tools/mock_runtime.json
