@@ -1,8 +1,12 @@
-# Dear Esther VR
+# Dear Esther Landmark Edition VR
 
 Play **Dear Esther: Landmark Edition** in a PC VR headset, in full stereoscopic 3D.
 
 The island is rendered separately for each eye, from your head's own position and with your headset's own lens views, so depth, scale and distance look as they should. Head tracking is full 6DoF: lean, crouch, look around, and walk with a gamepad or keyboard as usual.
+
+The shadow depth option in the VR menu will lower the brightness in dark areas. In an LCD headset, I found that areas that should have been more subdued appeared too bright, and this option helps adjust for that while trying to keep lit areas bright.
+
+The sharpness option can actually help increase texture detail at a distance, but might cause more shimmering on closer textures. Increasing render resolution can help to mitigate the shimmer.
 
 > **For Dear Esther: Landmark Edition only** (the 2017 release on Steam). It does not work with the original 2012 *Dear Esther*, or with the Half-Life 2 mod it grew from.
 
@@ -61,9 +65,6 @@ The same settings, plus the choice of headset runtime, are in `DearEstherVR\Dear
 
 ## Good to know
 
-- While VR runs, the game plays in a window on your desktop that shows the left eye and the menus.
-- The moon and the developer commentary icons always face you upright.
-- If fine textures look slightly soft with both eyes open but sharp with either eye alone, try a higher bitrate or less sharpening in Virtual Desktop. Each eye is compressed separately for the stream; the mod's two eye images were checked to match.
 - If the game plays flat instead of in VR, `DearEstherVR\DearEstherVR.log` in the game folder says why. Its first line shows the version that ran.
 
 ## Credits
