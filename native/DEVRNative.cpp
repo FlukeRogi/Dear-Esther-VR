@@ -447,7 +447,8 @@ void bridge::Log(const char* fmt, ...) {
     if (g_logs.size() < 512) g_logs.emplace_back(b);
 }
 
-// Returns 0 on success, 1 when no headset is available yet (worth retrying), or 2 on a hard failure.
+// Returns 0 on success, 1 when no headset is available yet (worth retrying), 2 on a hard failure, or 3 when the
+// OpenXR runtime itself can't be started (its manifest or DLL can't be loaded): worth trying another way instead.
 API int DVR_Create(const char* runtimeJson, int backend) {
     Log("DVR_Create on thread %lu", GetCurrentThreadId());
     if (g_backend != 0) return 0;
@@ -457,6 +458,8 @@ API int DVR_Create(const char* runtimeJson, int backend) {
         return r;
     }
     if (g_instance) return 0;
+    // An empty manifest means the system's active runtime, so an override left from an earlier attempt goes.
+    if (!runtimeJson || !runtimeJson[0]) SetEnvironmentVariableA("XR_RUNTIME_JSON", nullptr);
     if (runtimeJson && runtimeJson[0]) {
         SetEnvironmentVariableA("XR_RUNTIME_JSON", runtimeJson);
         Log("runtime override: %s", runtimeJson);
@@ -471,7 +474,16 @@ API int DVR_Create(const char* runtimeJson, int backend) {
     ci.enabledExtensionCount = 1;
     ci.enabledExtensionNames = exts;
     XrResult r = xrCreateInstance(&ci, &g_instance);
-    if (XR_FAILED(r)) { Log("xrCreateInstance failed: %d", (int)r); g_instance = XR_NULL_HANDLE; return 1; }
+    if (XR_FAILED(r)) {
+        const char* what = r == XR_ERROR_FILE_ACCESS_ERROR ? "XR_ERROR_FILE_ACCESS_ERROR: the runtime's manifest or DLL couldn't be loaded (often a 64-bit-only runtime, or a leftover registration)"
+                         : r == XR_ERROR_RUNTIME_UNAVAILABLE ? "XR_ERROR_RUNTIME_UNAVAILABLE: no OpenXR runtime is installed for 32-bit programs"
+                         : r == XR_ERROR_FILE_CONTENTS_INVALID ? "XR_ERROR_FILE_CONTENTS_INVALID: the runtime's manifest is damaged"
+                         : r == XR_ERROR_EXTENSION_NOT_PRESENT ? "XR_ERROR_EXTENSION_NOT_PRESENT: the runtime has no Direct3D 11 support"
+                         : r == XR_ERROR_INSTANCE_LOST ? "XR_ERROR_INSTANCE_LOST" : "";
+        Log("xrCreateInstance failed: %d %s", (int)r, what);
+        g_instance = XR_NULL_HANDLE;
+        return r == XR_ERROR_INSTANCE_LOST ? 1 : 3;
+    }
 
     XrInstanceProperties ip{XR_TYPE_INSTANCE_PROPERTIES};
     if (XR_SUCCEEDED(xrGetInstanceProperties(g_instance, &ip))) {

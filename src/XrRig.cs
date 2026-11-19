@@ -97,6 +97,8 @@ namespace DearEstherVR
         }
 
         bool _symApplied;
+        List<Cfg.Backend> _backends;
+        int _backendIndex;
         string _heightModeSeen;
 
         /// <summary>The fade drawn over both eyes this frame (alpha 0: none). See Fade.</summary>
@@ -246,15 +248,39 @@ namespace DearEstherVR
             _nextCreate = Time.unscaledTime + _retryDelay;
             // Connecting launches SteamVR, so it must not come back after the player quit it.
             if (_steamVrSession && !Native.SteamVrRunning) return;
-            string manifest;
-            int backend = Cfg.ResolveBackend(out manifest);
-            int r = Native.DVR_Create(manifest, backend);
+            if (_backends == null)
+            {
+                _backends = Cfg.Backends();
+                _backendIndex = 0;
+                var names = new System.Text.StringBuilder();
+                foreach (var b in _backends) names.Append(names.Length > 0 ? ", then " : "").Append(b.Name);
+                Log.Info("Ways to reach the headset: " + (names.Length > 0 ? names.ToString() : "none"));
+            }
+            if (_backends.Count == 0)
+            {
+                Log.Error("No headset runtime this 32-bit game can use was found: no working 32-bit OpenXR runtime (such as Virtual Desktop's VDXR or Meta's), and SteamVR isn't installed. Playing flat.");
+                _nextCreate = float.MaxValue;
+                return;
+            }
+            var backend = _backends[_backendIndex % _backends.Count];
+            int r = Native.DVR_Create(backend.Manifest, backend.Kind);
             Native.PumpLogs();
             if (r != 0)
             {
-                if (r == 2) _nextCreate = float.MaxValue;
+                // 1: the runtime works but no headset yet; keep trying the same way (so a Virtual Desktop user
+                // never gets SteamVR started instead). 2 or 3: this way can't work at all, so it is dropped and
+                // the next one tried straight away.
+                if (r == 2 || r == 3)
+                {
+                    Log.Warn("Can't reach the headset through " + backend.Name + (r == 3 ? " (the runtime itself couldn't start)" : "") +
+                             (_backends.Count > 1 ? "; trying the next way" : ""));
+                    _backends.RemoveAt(_backendIndex % _backends.Count);
+                    _nextCreate = Time.unscaledTime;
+                    _retryDelay = 1.25f;
+                }
                 return;
             }
+            Log.Info("Connected through " + backend.Name);
             _created = true;
             _retryDelay = 2.5f;
             _steamVrSession = Native.RuntimeName.IndexOf("SteamVR", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -333,6 +359,7 @@ namespace DearEstherVR
             Log.Info("The VR session ended, and will reconnect when the headset's runtime is available");
             GL.IssuePluginEvent(_ev, EvShutdown);
             _created = false;
+            _backends = null;
             _nextCreate = Time.unscaledTime + 5f;
         }
 

@@ -14,7 +14,7 @@ This is an unofficial fan mod. It is not made or endorsed by The Chinese Room.
 
 ## Download
 
-Get **Dear-Esther-VR-1.0.0.zip** from the [Releases](../../releases) page.
+Get the latest **Dear-Esther-VR-x.y.z.zip** from the [Releases](../../releases) page.
 
 ## Install
 
@@ -33,6 +33,12 @@ Dear Esther: Landmark Edition is a 32-bit game, which decides how it reaches the
 - **Virtual Desktop** (Quest and others): uses Virtual Desktop's own OpenXR runtime, VDXR, automatically when SteamVR isn't running.
 - **SteamVR**: connects to SteamVR directly. Start SteamVR first, or let the game start it.
 - **Other headsets** work if they offer a 32-bit OpenXR runtime (Meta's does).
+
+### If the game plays flat
+
+Windows keeps a separate "active OpenXR runtime" for 32-bit programs. If that points at a runtime this game can't load (SteamVR's OpenXR runtime is 64-bit only, or a leftover from something uninstalled), version 1.0.1 and later skip it and try Virtual Desktop's VDXR, then SteamVR. The log says what it found: `DearEstherVR\DearEstherVR.log` in the game folder.
+
+If it still plays flat, choose the way in yourself with the `Runtime` line in `DearEstherVR\DearEstherVR.cfg`: `Runtime = vdxr` for Virtual Desktop, or `Runtime = steamvr` for SteamVR (or just start SteamVR before the game). With Quest Link, set Meta as the active OpenXR runtime in the Meta app's settings.
 
 ## Playing
 

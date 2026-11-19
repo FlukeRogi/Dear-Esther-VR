@@ -80,7 +80,7 @@ if ($Action -eq 'Install') {
     $cfg = Join-Path $GameDir 'DearEstherVR\DearEstherVR.cfg'
     if (Test-Path $cfg) {
         $text = Get-Content $cfg
-        $fixed = $text -replace '^LabCommands = true', 'LabCommands = false' -replace '^Skip = .*$', 'Skip = '
+        $fixed = $text -replace '^LabCommands = true', 'LabCommands = false' -replace '^Skip = .*$', 'Skip = ' -replace '^TestActiveRuntime = .*$', 'TestActiveRuntime = ' -replace '^TestVdxrRuntime = .*$', 'TestVdxrRuntime = '
         if (($fixed -join "`n") -ne ($text -join "`n")) { Set-Content $cfg $fixed -Encoding ascii; Write-Host 'Switched off the developer test settings.'; Write-Host '' }
     }
     Write-Host "Dear Esther VR $package is installed and checked." -ForegroundColor Green

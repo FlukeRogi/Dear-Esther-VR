@@ -1,5 +1,5 @@
-Dear Esther VR 1.0
-==================
+Dear Esther VR 1.0.1
+====================
 
 Plays Dear Esther: Landmark Edition in a PC VR headset, in full stereoscopic 3D: the island is rendered separately
 for each eye, from your head's own position, with the headset's own lens views. Head tracking is full 6DoF.
@@ -93,4 +93,8 @@ Things to know in this build
   * Not done yet: subtitle placement choices, and the game's zoom button and the ending's zoom (they don't zoom in
     VR yet).
   * If the game plays flat instead of in VR, DearEstherVR\DearEstherVR.log in the game folder says why. Its first
-    line shows the version that ran.
+    line shows the version that ran. The usual cause is the active OpenXR runtime Windows has registered for
+    32-bit programs: SteamVR's is 64-bit only, and uninstalled runtimes can leave a broken entry. The mod skips
+    those and tries VDXR, then SteamVR. To choose yourself, set "Runtime = vdxr" (Virtual Desktop) or
+    "Runtime = steamvr" in DearEstherVR\DearEstherVR.cfg, or start SteamVR before the game. With Quest Link, set
+    Meta as the active OpenXR runtime in the Meta app.

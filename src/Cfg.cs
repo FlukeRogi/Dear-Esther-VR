@@ -96,6 +96,10 @@ namespace DearEstherVR
             "Eye MSAA samples. 0 follows the game's own anti-aliasing setting.");
         public static readonly BoolSetting DrawCopy = Bool("Debug", "DrawCopy", true,
             "Copy eye images with a flipped GUI draw (normal). Off uses a plain Blit, for troubleshooting only.");
+        public static readonly StringSetting TestActiveRuntime = Str("Debug", "TestActiveRuntime", "",
+            "Testing only: stands in for the registered active 32-bit OpenXR runtime. Leave empty.");
+        public static readonly StringSetting TestVdxrRuntime = Str("Debug", "TestVdxrRuntime", "",
+            "Testing only: stands in for VDXR's registered manifest. Leave empty.");
         public static readonly StringSetting Skip = Str("Debug", "Skip", "",
             "Troubleshooting only: leave out parts of the frame (submit, eyes, ui).");
         public static readonly BoolSetting LabCommands = Bool("Debug", "LabCommands", false,
@@ -184,21 +188,50 @@ namespace DearEstherVR
         /// prefers SteamVR when it is already running, and the system's active 32-bit OpenXR runtime otherwise.
         /// For OpenXR, <paramref name="manifest"/> is the runtime to load, or empty for the active one.
         /// </summary>
-        public static int ResolveBackend(out string manifest)
+        /// <summary>One way to reach the headset: OpenXR with a runtime manifest (empty for the system's active
+        /// one), or OpenVR for SteamVR.</summary>
+        public struct Backend
         {
-            manifest = "";
+            public int Kind;
+            public string Manifest;
+            public string Name;
+        }
+
+        /// <summary>
+        /// The ways to try, in order. A fixed Runtime setting gives just that one. Auto: SteamVR when it is
+        /// already running; otherwise the active 32-bit OpenXR runtime if it really is a loadable 32-bit runtime,
+        /// then Virtual Desktop's VDXR if installed, then SteamVR through OpenVR. Everything left out is logged
+        /// with the reason, because a broken or 64-bit-only registration is the usual cause of "plays flat".
+        /// </summary>
+        public static List<Backend> Backends()
+        {
+            var list = new List<Backend>();
             var v = (Runtime.Value ?? "auto").Trim();
-            if (v.Equals("steamvr", StringComparison.OrdinalIgnoreCase)) return Native.BackendOpenVR;
-            if (v.Equals("openxr", StringComparison.OrdinalIgnoreCase)) return Native.BackendOpenXR;
+            if (v.Equals("steamvr", StringComparison.OrdinalIgnoreCase)) { list.Add(new Backend { Kind = Native.BackendOpenVR, Manifest = "", Name = "SteamVR (OpenVR)" }); return list; }
+            if (v.Equals("openxr", StringComparison.OrdinalIgnoreCase)) { list.Add(new Backend { Kind = Native.BackendOpenXR, Manifest = "", Name = "the active OpenXR runtime" }); return list; }
             if (v.Equals("vdxr", StringComparison.OrdinalIgnoreCase))
             {
-                manifest = FindOpenXRRuntime("virtualdesktop-openxr");
-                if (manifest.Length == 0) Log.Warn("VDXR's 32-bit runtime was not found, using the active OpenXR runtime.");
-                return Native.BackendOpenXR;
+                var vd = FindOpenXRRuntime("virtualdesktop-openxr");
+                if (vd.Length == 0) Log.Warn("VDXR's 32-bit runtime was not found in the OpenXR runtime list, so the active OpenXR runtime is used. Is Virtual Desktop's Streamer installed and up to date?");
+                list.Add(new Backend { Kind = Native.BackendOpenXR, Manifest = vd, Name = "VDXR" });
+                return list;
             }
-            if (v.Length > 0 && !v.Equals("auto", StringComparison.OrdinalIgnoreCase)) { manifest = v; return Native.BackendOpenXR; }
-            if (Native.SteamVrRunning) return Native.BackendOpenVR;
-            return ActiveOpenXRRuntime().Length > 0 ? Native.BackendOpenXR : Native.BackendOpenVR;
+            if (v.Length > 0 && !v.Equals("auto", StringComparison.OrdinalIgnoreCase)) { list.Add(new Backend { Kind = Native.BackendOpenXR, Manifest = v, Name = v }); return list; }
+
+            if (Native.SteamVrRunning) list.Add(new Backend { Kind = Native.BackendOpenVR, Manifest = "", Name = "SteamVR (OpenVR), already running" });
+            string why;
+            var active = (TestActiveRuntime.Value ?? "").Length > 0 ? TestActiveRuntime.Value : ActiveOpenXRRuntime();
+            if (active.Length == 0) Log.Info("Runtime: no active 32-bit OpenXR runtime is registered (HKLM\\SOFTWARE\\WOW6432Node\\Khronos\\OpenXR\\1 ActiveRuntime)");
+            else if (Usable32(active, out why)) list.Add(new Backend { Kind = Native.BackendOpenXR, Manifest = (TestActiveRuntime.Value ?? "").Length > 0 ? active : "", Name = "the active OpenXR runtime (" + active + ")" });
+            else Log.Warn("Runtime: the active 32-bit OpenXR runtime can't be used by this 32-bit game, so it is skipped: " + active + " - " + why);
+            var vdxr = (TestVdxrRuntime.Value ?? "").Length > 0 ? TestVdxrRuntime.Value : FindOpenXRRuntime("virtualdesktop-openxr");
+            if (vdxr.Length > 0 && !string.Equals(vdxr, active, StringComparison.OrdinalIgnoreCase))
+            {
+                if (Usable32(vdxr, out why)) list.Add(new Backend { Kind = Native.BackendOpenXR, Manifest = vdxr, Name = "VDXR (" + vdxr + ")" });
+                else Log.Warn("Runtime: VDXR's manifest can't be used: " + vdxr + " - " + why);
+            }
+            if (!Native.SteamVrRunning) list.Add(new Backend { Kind = Native.BackendOpenVR, Manifest = "", Name = "SteamVR (OpenVR)" });
+            return list;
         }
 
         // A 32-bit process reads the 32-bit OpenXR registration, which is what its loader uses.
@@ -209,12 +242,46 @@ namespace DearEstherVR
             try
             {
                 using (var key = Registry.LocalMachine.OpenSubKey(KhronosKey))
-                {
-                    var active = key?.GetValue("ActiveRuntime") as string;
-                    return active != null && File.Exists(active) ? active : "";
-                }
+                    return (key?.GetValue("ActiveRuntime") as string) ?? "";
             }
             catch (Exception e) { Log.Warn("Could not read the active OpenXR runtime: " + e.Message); return ""; }
+        }
+
+        /// <summary>Whether an OpenXR runtime manifest points at a DLL this 32-bit game can load.</summary>
+        public static bool Usable32(string manifest, out string why)
+        {
+            why = "";
+            try
+            {
+                if (!File.Exists(manifest)) { why = "the manifest file doesn't exist (a leftover from an uninstalled runtime?)"; return false; }
+                var text = File.ReadAllText(manifest);
+                var m = System.Text.RegularExpressions.Regex.Match(text, "\"library_path\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
+                if (!m.Success) { why = "the manifest names no library_path"; return false; }
+                var lib = m.Groups[1].Value.Replace("\\\\", "\\").Replace("\\/", "/");
+                if (!Path.IsPathRooted(lib)) lib = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(manifest), lib));
+                if (!File.Exists(lib)) { why = "its runtime DLL doesn't exist: " + lib; return false; }
+                var machine = PeMachine(lib);
+                if (machine == 0x8664) { why = "its runtime DLL is 64-bit only (" + lib + "). SteamVR's OpenXR runtime is like this; the mod reaches SteamVR through OpenVR instead"; return false; }
+                if (machine != 0x14c) { why = "its runtime DLL isn't a 32-bit Windows DLL (" + lib + ")"; return false; }
+                return true;
+            }
+            catch (Exception e) { why = "it couldn't be read: " + e.Message; return false; }
+        }
+
+        /// <summary>The machine type in a DLL's PE header: 0x14c for 32-bit x86, 0x8664 for x64, 0 if unreadable.</summary>
+        static int PeMachine(string path)
+        {
+            using (var f = File.OpenRead(path))
+            using (var r = new BinaryReader(f))
+            {
+                if (f.Length < 0x40) return 0;
+                f.Position = 0x3C;
+                int pe = r.ReadInt32();
+                if (pe <= 0 || pe + 6 > f.Length) return 0;
+                f.Position = pe;
+                if (r.ReadUInt32() != 0x00004550) return 0;
+                return r.ReadUInt16();
+            }
         }
 
         static string FindOpenXRRuntime(string nameStart)
