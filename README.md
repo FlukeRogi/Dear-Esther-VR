@@ -38,6 +38,8 @@ Dear Esther: Landmark Edition is a 32-bit game, which decides how it reaches the
 
 Windows keeps a separate "active OpenXR runtime" for 32-bit programs. If that points at a runtime this game can't load (SteamVR's OpenXR runtime is 64-bit only, or a leftover from something uninstalled), version 1.0.1 and later skip it and try Virtual Desktop's VDXR, then SteamVR. The log says what it found: `DearEstherVR\DearEstherVR.log` in the game folder.
 
+The other usual cause, and the one behind "error -32" in the log, is an **OpenXR API layer**: an add-on that tools such as overlays, OpenXR Toolkit, capture or hand-tracking software register for every OpenXR program. If one registered for 32-bit programs is 64-bit only, or was left behind by an uninstall, the OpenXR loader refuses to start at all, whatever the headset. Version 1.0.2 and later switch such layers off for this game only (nothing changes for other programs, and the registry isn't touched), and if VR still can't start, they try once more with every layer switched off. The log names each layer and what was done with it. To switch every layer off from the start, set `ApiLayers = off` in `DearEstherVR\DearEstherVR.cfg`.
+
 If it still plays flat, choose the way in yourself with the `Runtime` line in `DearEstherVR\DearEstherVR.cfg`: `Runtime = vdxr` for Virtual Desktop, or `Runtime = steamvr` for SteamVR (or just start SteamVR before the game). With Quest Link, set Meta as the active OpenXR runtime in the Meta app's settings.
 
 ## Playing

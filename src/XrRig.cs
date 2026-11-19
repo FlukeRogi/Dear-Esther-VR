@@ -263,8 +263,17 @@ namespace DearEstherVR
                 return;
             }
             var backend = _backends[_backendIndex % _backends.Count];
+            if (backend.Kind == Native.BackendOpenXR) ApiLayers.Prepare();
             int r = Native.DVR_Create(backend.Manifest, backend.Kind);
             Native.PumpLogs();
+            // The loader fails every runtime alike when an API layer can't load, so before giving up on OpenXR,
+            // every layer is switched off for this game and the same runtime tried again.
+            if (r == 3 && backend.Kind == Native.BackendOpenXR && ApiLayers.TurnAllOff())
+            {
+                Log.Warn("Can't start " + backend.Name + "; trying again with every OpenXR API layer switched off for this game");
+                r = Native.DVR_Create(backend.Manifest, backend.Kind);
+                Native.PumpLogs();
+            }
             if (r != 0)
             {
                 // 1: the runtime works but no headset yet; keep trying the same way (so a Virtual Desktop user

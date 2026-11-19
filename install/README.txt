@@ -1,4 +1,4 @@
-Dear Esther VR 1.0.1
+Dear Esther VR 1.0.2
 ====================
 
 Plays Dear Esther: Landmark Edition in a PC VR headset, in full stereoscopic 3D: the island is rendered separately
@@ -78,6 +78,8 @@ Changes apply at once.
 
 The same settings, plus the headset runtime, are in DearEstherVR\DearEstherVR.cfg in the game folder:
   Runtime   auto (SteamVR if running, otherwise the active OpenXR runtime), steamvr, vdxr, openxr, or off
+  ApiLayers auto (switch off OpenXR add-on layers that can't work in this 32-bit game), off (switch off all of
+            them), or on (leave them all alone). Only this game is affected.
 Leave its [Debug] section as it is.
 
 
@@ -95,6 +97,8 @@ Things to know in this build
   * If the game plays flat instead of in VR, DearEstherVR\DearEstherVR.log in the game folder says why. Its first
     line shows the version that ran. The usual cause is the active OpenXR runtime Windows has registered for
     32-bit programs: SteamVR's is 64-bit only, and uninstalled runtimes can leave a broken entry. The mod skips
-    those and tries VDXR, then SteamVR. To choose yourself, set "Runtime = vdxr" (Virtual Desktop) or
+    those and tries VDXR, then SteamVR. "Error -32" in the log usually means an OpenXR API layer (an add-on
+    from an overlay, toolkit, capture or hand-tracking tool) that is 64-bit only or left over from an uninstall:
+    the mod switches those off for this game only, and if VR still can't start, tries again with all of them off. To choose yourself, set "Runtime = vdxr" (Virtual Desktop) or
     "Runtime = steamvr" in DearEstherVR\DearEstherVR.cfg, or start SteamVR before the game. With Quest Link, set
     Meta as the active OpenXR runtime in the Meta app.

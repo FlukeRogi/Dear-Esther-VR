@@ -56,6 +56,8 @@ namespace DearEstherVR
 
         public static readonly StringSetting Runtime = Str("OpenXR", "Runtime", "auto",
             "How to reach the headset: auto (SteamVR if it is running, otherwise the active OpenXR runtime), steamvr, vdxr (Virtual Desktop), openxr (the active OpenXR runtime), off (play flat), or a full path to an OpenXR runtime JSON manifest.");
+        public static readonly StringSetting ApiLayersMode = Str("OpenXR", "ApiLayers", "auto",
+            "OpenXR API layers (add-ons such as overlays and toolkits) for this game only: auto switches off any that can't load in a 32-bit game, which otherwise stop VR starting (error -32), and all of them if VR still can't start; off switches all of them off; on leaves them all alone.");
         public static readonly FloatSetting WorldScale = Num("View", "WorldScale", 1f, 0.25f, 4f,
             "How large the world feels. 1 treats one game unit as a metre. Higher makes the world bigger and you smaller.");
         public static readonly StringSetting HeightMode = Str("View", "HeightMode", "standing",
@@ -269,7 +271,7 @@ namespace DearEstherVR
         }
 
         /// <summary>The machine type in a DLL's PE header: 0x14c for 32-bit x86, 0x8664 for x64, 0 if unreadable.</summary>
-        static int PeMachine(string path)
+        internal static int PeMachine(string path)
         {
             using (var f = File.OpenRead(path))
             using (var r = new BinaryReader(f))

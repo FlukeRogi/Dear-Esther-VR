@@ -475,7 +475,7 @@ API int DVR_Create(const char* runtimeJson, int backend) {
     ci.enabledExtensionNames = exts;
     XrResult r = xrCreateInstance(&ci, &g_instance);
     if (XR_FAILED(r)) {
-        const char* what = r == XR_ERROR_FILE_ACCESS_ERROR ? "XR_ERROR_FILE_ACCESS_ERROR: the runtime's manifest or DLL couldn't be loaded (often a 64-bit-only runtime, or a leftover registration)"
+        const char* what = r == XR_ERROR_FILE_ACCESS_ERROR ? "XR_ERROR_FILE_ACCESS_ERROR: a DLL the OpenXR loader needs couldn't be loaded: the runtime's, or an OpenXR API layer's (often 64-bit only, or left over after an uninstall)"
                          : r == XR_ERROR_RUNTIME_UNAVAILABLE ? "XR_ERROR_RUNTIME_UNAVAILABLE: no OpenXR runtime is installed for 32-bit programs"
                          : r == XR_ERROR_FILE_CONTENTS_INVALID ? "XR_ERROR_FILE_CONTENTS_INVALID: the runtime's manifest is damaged"
                          : r == XR_ERROR_EXTENSION_NOT_PRESENT ? "XR_ERROR_EXTENSION_NOT_PRESENT: the runtime has no Direct3D 11 support"
